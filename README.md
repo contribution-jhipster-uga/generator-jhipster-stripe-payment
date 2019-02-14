@@ -4,11 +4,13 @@
 
 # Introduction
 
-This is a [JHipster](http://jhipster.github.io/) module, that is meant to be used in a JHipster application. This will add a new payment page (located in /payments):
+This is a [JHipster](http://jhipster.github.io/) module, that is meant to be used in a JHipster application. This will add a new payment page (located in yourURL/payments for examples if you are still developping: localhost:8080/payments):
 ![Payment Page](images/PaymentPage.png)
 
 When a payment is successful, a popup will appear and a new payment entity will be created:
 ![Entity Page](images/EntityPayment.png)
+
+Just click once on buy!
 
 Please note that the 'receipt' field corresponds to the json file returned by the stripe api. It includes the receipt 'url'.
 
@@ -69,10 +71,6 @@ If rewriting is necessary, please enter 'a' to rewrite all files.
 Then start your application:
 ```bash
 ./mvnw
-```
-And in an other terminal:
-```bash
-npm start
 ```
 
 # Additional information
