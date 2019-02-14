@@ -428,6 +428,7 @@ import { ${appname}PaymentsModule } from './payments/payments.module';`]
     }
 
     end() {
+        this.rebuildClient();
         this.log('End of stripe-payment generator');
     }
 };
