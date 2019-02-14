@@ -1,0 +1,26 @@
+form.checkout {
+  max-width: 600px;
+  margin: 2rem auto;
+  text-align: center;
+  border: 2px solid #eee;
+  border-radius: 8px;
+  padding: 1rem 2rem;
+  background: white;
+
+  font-family: monospace;
+  color: #525252;
+  font-size: 1.1rem;
+}
+
+form.checkout button {
+  padding: 0.5rem 1rem;
+  color: white;
+  background: coral;
+  border: none;
+  border-radius: 4px;
+  margin-top: 1rem;
+}
+
+form.checkout button:active {
+  background: rgb(165, 76, 43);
+}

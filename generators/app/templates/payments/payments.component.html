@@ -1,0 +1,16 @@
+<h1> Payment </h1>
+
+<!-- <div>
+  For information
+  <p> Transaction amount: <b>{{amount}}</b> </p>
+  <p> Transaction currency: <b>{{currency}}</b> </p>
+
+</div> -->
+
+<form novalidate (ngSubmit)="buy()" [formGroup]="stripeTest" class="checkout">
+  <input type="text" formControlName="name" placeholder="Jane Doe">
+  <div id="card-element" class="field"></div>
+  <button type="submit">
+    BUY {{amount}} {{currencySymbol}}
+  </button>
+</form>

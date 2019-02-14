@@ -1,0 +1,13 @@
+entity Payment {
+    date ZonedDateTime required
+    token String required
+    currency String required
+    amount Integer required min(0)
+    description String
+    capture Boolean required
+    receipt TextBlob
+}
+
+relationship ManyToOne{
+	Payment{user} to User{payment}
+}
