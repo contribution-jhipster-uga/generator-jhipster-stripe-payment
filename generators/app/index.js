@@ -396,6 +396,35 @@ import { ${appname}PaymentsModule } from './payments/payments.module';`]
             .pipe(map((res: EntityResponseType) => this.convertDateFromServer(res)));
     }`]
             }, this);
+
+            // Adding Payment front-end page in the navbar (html)
+
+            jhipsterUtils.rewriteFile({
+                file: `${webappDir}app/layouts/navbar/navbar.component.html`,
+                needle: '<!-- jhipster-needle-add-element-to-menu - JHipster will add new menu items here -->',
+                splicable: [`<li class="nav-item" routerLinkActive="active" [routerLinkActiveOptions]="{exact: true}">
+                <a class="nav-link" routerLink="/payments" (click)="collapseNavbar()">
+                    <span>
+                        <fa-icon icon="credit-card"></fa-icon>
+                        <span>Payment</span>
+                    </span>
+                </a>
+            </li>`]
+            }, this);
+
+            // Adding Payment front-end page in the navbar (fa-icon)
+            jhipsterUtils.rewriteFile({
+                file: `${webappDir}app/vendor.ts`,
+                needle: 'jhipster-needle-add-element-to-vendor - JHipster will add new menu items here',
+                splicable: [`library.add(faCreditCard);`]
+            }, this);
+
+            jhipsterUtils.rewriteFile({
+                file: `${webappDir}app/vendor.ts`,
+                needle: 'faTasks,',
+                splicable: [`faCreditCard,`]
+            }, this);
+
         } else {
             this.warning(`\n Your JHipster configuration is not supported yet ! :( Please use Maven and AngularX...`);
         }
