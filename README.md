@@ -14,6 +14,8 @@ Just click once on buy!
 
 Please note that the 'receipt' field corresponds to the json file returned by the stripe api. It includes the receipt 'url'.
 
+You can find a sample application using this generator here : [Sample Application](https://github.com/contribution-jhipster-uga/sample-application-stripe)
+
 
 # Prerequisites
 

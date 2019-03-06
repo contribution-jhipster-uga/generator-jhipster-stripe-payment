@@ -1,6 +1,6 @@
 {
   "name": "generator-jhipster-stripe-payment",
-  "version": "1.0.5",
+  "version": "1.0.6",
   "description": "This module integrate the payment plateform STRIPE to a Jhipster project. (It includes a web payment page and a JHipster payment entity)",
   "keywords": [
     "yeoman-generator",
