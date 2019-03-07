@@ -147,8 +147,12 @@ module.exports = class extends BaseGenerator {
             this.template('payments/payments.component.html', `${webappDir}app/payments/payments.component.html`);
             this.template('payments/payments.module.ts', `${webappDir}app/payments/payments.module.ts`);
             this.template('payments/payments.route.ts', `${webappDir}app/payments/payments.route.ts`);
-            this.template('payments/payments.scss', `${webappDir}app/payments/payments.scss`);
 
+            if (this.jhipsterAppConfig.useSass) {
+                this.template('payments/payments.scss', `${webappDir}app/payments/payments.scss`);
+            } else {
+                this.template('payments/payments.scss', `${webappDir}app/payments/payments.css`);
+            }
             //Changing payment entity backend and rest API
             // Changing web rest
             var paymentRess = fs.readFileSync(`${javaDir}web/rest/PaymentResource.java`);
@@ -302,12 +306,13 @@ import io.github.jhipster.web.util.ResponseUtil;`]
             }, this);
 
             //adding payments.json file in all languages
-            var pathLangs = `${webappDir}i18n`;
-            var allLangs = fs.readdirSync(pathLangs);
-            for (var i = 0; i < allLangs.length; i++) {
-                this.template('payments.json', `${webappDir}/i18n/${allLangs[i]}/payments.json`);
+            if (this.jhipsterAppConfig.enableTranslation) {
+                var pathLangs = `${webappDir}i18n`;
+                var allLangs = fs.readdirSync(pathLangs);
+                for (var i = 0; i < allLangs.length; i++) {
+                    this.template('payments.json', `${webappDir}/i18n/${allLangs[i]}/payments.json`);
+                }
             }
-
             //changing pom.xml (adding stripe dependency)
 
             // Maven + AngularX
@@ -457,6 +462,18 @@ import { ${appname}PaymentsModule } from './payments/payments.module';`]
     }
 
     end() {
+        const webappDir = jhipsterConstants.CLIENT_MAIN_SRC_DIR;
+        var fs = require('fs');
+        if (!this.jhipsterAppConfig.useSass) {
+            var paymentRess = fs.readFileSync(`${webappDir}app/payments/payments.component.ts`);
+            var res = paymentRess.toString().replace('styleUrls: [\'payments.scss\']', 'styleUrls: [\'payments.css\']');
+            fs.writeFileSync(`${webappDir}app/payments/payments.component.ts`, res);
+        }
+        if (!this.jhipsterAppConfig.enableTranslation) {
+            var paymentRess = fs.readFileSync(`${webappDir}app/payments/payments.route.ts`);
+            var res = paymentRess.toString().replace('pageTitle: \'localversionApp.payments.title\'', 'pageTitle: \'Payment\'');
+            fs.writeFileSync(`${webappDir}app/payments/payments.route.ts`, res);
+        }
         this.rebuildClient();
         this.log('End of stripe-payment generator');
     }
