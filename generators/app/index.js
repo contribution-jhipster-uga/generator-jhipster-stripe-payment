@@ -4,6 +4,7 @@ const semver = require('semver');
 const BaseGenerator = require('generator-jhipster/generators/generator-base');
 const jhipsterConstants = require('generator-jhipster/generators/generator-constants');
 const jhipsterUtils = require('generator-jhipster/generators/utils');
+const _ = require('lodash');
 
 module.exports = class extends BaseGenerator {
     get initializing() {
@@ -70,6 +71,7 @@ module.exports = class extends BaseGenerator {
                     this
                 );
             };
+            var fs = require('fs');
 
             // read config from .yo-rc.json
             this.baseName = this.jhipsterAppConfig.baseName;
@@ -93,6 +95,7 @@ module.exports = class extends BaseGenerator {
             this.priStripeKey = this.props.priStripeKey;
 
             this.template('payment.jh', 'payment.jh');
+
         } else {
             this.warning(`\n Your JHipster configuration is not supported yet ! :( Please use Maven and AngularX...`);
             console.log(this.jhipsterAppConfig.clientFramework);
@@ -153,12 +156,112 @@ module.exports = class extends BaseGenerator {
             } else {
                 this.template('payments/payments.scss', `${webappDir}app/payments/payments.css`);
             }
-            //Changing payment entity backend and rest API
-            // Changing web rest
-            var paymentRess = fs.readFileSync(`${javaDir}web/rest/PaymentResource.java`);
-            var res = paymentRess.toString().replace('public PaymentResource(PaymentRepository paymentRepository) {', 'public PaymentResource(PaymentRepository paymentRepository, UserRepository userRepository) {');
-            fs.writeFileSync(`${javaDir}web/rest/PaymentResource.java`, res);
 
+            //adding payments.json file in all languages
+            if (this.jhipsterAppConfig.enableTranslation) {
+                var pathLangs = `${webappDir}i18n`;
+                var allLangs = fs.readdirSync(pathLangs);
+                for (var i = 0; i < allLangs.length; i++) {
+                    this.template('payments.json', `${webappDir}/i18n/${allLangs[i]}/payments.json`);
+                }
+            }
+            //changing pom.xml (adding stripe dependency)
+
+            // Maven + AngularX
+            if (this.buildTool === 'maven') {
+                jhipsterUtils.rewriteFile({
+                    file: 'pom.xml',
+                    needle: 'jhipster-needle-maven-add-dependency',
+                    splicable: [`<dependency>
+                <groupId>com.stripe</groupId>
+                <artifactId>stripe-java</artifactId>
+                <version>7.0.0</version>
+            </dependency>`]
+                }, this);
+
+            }
+            if (this.buildTool === 'gradle') {
+                //Add stripe dependency for stripe here
+                //compile "com.stripe:stripe-java:7.21.0"
+            }
+
+            //changing app.module.ts (adding stripe and form)
+
+            var appname = this.getAngularXAppName();
+            //var appname = appnamenomaj.charAt(0).toUpperCase() + appnamenomaj.substring(1);
+
+            jhipsterUtils.rewriteFile({
+                file: `${webappDir}app/app.module.ts`,
+                needle: 'jhipster-needle-angular-add-module-import',
+                splicable: [`import { NgxStripeModule } from 'ngx-stripe';`]
+            }, this);
+
+            jhipsterUtils.rewriteFile({
+                file: `${webappDir}app/app.module.ts`,
+                needle: 'jhipster-needle-angular-add-module',
+                splicable: [`NgxStripeModule.forRoot('${this.pubStripeKey}'),`]
+            }, this);
+
+            this.addAngularModule(
+                _.upperFirst(this.getAngularAppName()),
+                'Payments',
+                'payments',
+                'payments',
+                this.jhipsterAppConfig.enableTranslation,
+                'angularX');
+
+            // changing app-routing.module.ts (import FormsModule and ReactiveFormsModule)
+            jhipsterUtils.rewriteFile({
+                file: `${webappDir}app/app-routing.module.ts`,
+                needle: './layouts',
+                splicable: [`import { FormsModule, ReactiveFormsModule } from '@angular/forms';`]
+            }, this);
+
+            jhipsterUtils.rewriteFile({
+                file: `${webappDir}app/app-routing.module.ts`,
+                needle: 'RouterModule.forRoot',
+                splicable: [`FormsModule, ReactiveFormsModule,`]
+            }, this);
+
+            // updating payments.module.ts to add project name
+
+            jhipsterUtils.rewriteFile({
+                file: `${webappDir}app/payments/payments.module.ts`,
+                needle: 'import { PAYMENTS_ROUTE, PaymentsComponent } from \'./\';',
+                splicable: [`import { ${appname}SharedModule } from \'app/shared\';`]
+            }, this);
+
+            jhipsterUtils.rewriteFile({
+                file: `${webappDir}app/payments/payments.module.ts`,
+                needle: 'declarations: [PaymentsComponent],',
+                splicable: [`imports: [${appname}SharedModule, RouterModule.forChild([PAYMENTS_ROUTE]), FormsModule, ReactiveFormsModule],`]
+            }, this);
+
+            var appnamenomaj = this.angularAppName;
+            var angularappname = appnamenomaj.charAt(0).toUpperCase() + appnamenomaj.substring(1);
+
+            jhipsterUtils.rewriteFile({
+                file: `${webappDir}app/payments/payments.module.ts`,
+                needle: '// JHipster Stripe Module will add new line here',
+                splicable: [`export class ${angularappname}PaymentsModule { }`]
+            }, this);
+
+            // Adding Payment front-end page in the navbar (html)
+
+            jhipsterUtils.rewriteFile({
+                file: `${webappDir}app/layouts/navbar/navbar.component.html`,
+                needle: '<!-- jhipster-needle-add-element-to-menu - JHipster will add new menu items here -->',
+                splicable: [`<li class="nav-item" routerLinkActive="active" [routerLinkActiveOptions]="{exact: true}">
+                <a class="nav-link" routerLink="/payments" (click)="collapseNavbar()">
+                    <span>
+                        <fa-icon icon="credit-card"></fa-icon>
+                        <span>Payment</span>
+                    </span>
+                </a>
+            </li>`]
+            }, this);
+
+            // Adding a new service in the back-end
             jhipsterUtils.rewriteFile({
                 file: `${javaDir}web/rest/PaymentResource.java`,
                 needle: 'import javax.validation.Valid;',
@@ -174,10 +277,6 @@ import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
-import ${this.packageName}.web.rest.util.PaginationUtil;
-import ${this.packageName}.security.SecurityUtils;
-import ${this.packageName}.repository.UserRepository;
-import ${this.packageName}.domain.User;
 import com.stripe.Stripe;
 import java.util.HashMap;
 import java.util.Map;
@@ -193,8 +292,7 @@ import io.github.jhipster.web.util.ResponseUtil;`]
             jhipsterUtils.rewriteFile({
                 file: `${javaDir}web/rest/PaymentResource.java`,
                 needle: 'private final PaymentRepository paymentRepository;',
-                splicable: [`
-  	/**
+                splicable: [`/**
   	 * PUT /payments/currentuser : Updates an existing payment.
   	 *
   	 * @param payment the payment to create with the current connected user
@@ -212,34 +310,24 @@ import io.github.jhipster.web.util.ResponseUtil;`]
   		if (payment.getId() == null) {
   			throw new BadRequestAlertException("Invalid id", ENTITY_NAME, "idnull");
   		}
-  		System.out.println("TEST");
-  		Optional<String> userstr = SecurityUtils.getCurrentUserLogin();
-  		if (userstr.isPresent()) {
-  			Optional<User> user = userRepository.findOneByLogin(userstr.get());
-  			payment.setUser(user.get());
-  		}
 
   		// Set your secret key: remember to change this to your live secret key in
   		// production
   		// See your keys here: https://dashboard.stripe.com/account/apikeys
   		Stripe.apiKey = "${this.priStripeKey}";
-
   		// Token is created using Checkout or Elements!
   		// Get the payment token ID submitted by the form:
   		// String token = request.getParameter("stripeToken");
-
   		Map<String, Object> params = new HashMap<>();
   		params.put("amount", payment.getAmount());
   		params.put("currency", payment.getCurrency());
   		params.put("description", payment.getDescription());
   		params.put("source", payment.getToken());
   		params.put("capture", payment.isCapture());
-
   		try {
   			Charge charge = Charge.create(params);
   			// System.out.println(charge);
         Payment result = paymentRepository.save(payment);
-
   			p = ResponseEntity.ok().headers(HeaderUtil.createEntityUpdateAlert(ENTITY_NAME, payment.getId().toString()))
   					.body(result);
         result.setReceipt(charge.toJson());
@@ -249,7 +337,6 @@ import io.github.jhipster.web.util.ResponseUtil;`]
   			System.out.println("Status is: " + e.getCode());
   			System.out.println("Message is: " + e.getMessage());
   			throw new BadRequestAlertException("CardException", ENTITY_NAME, "");
-
   		} catch (RateLimitException e) {
   			// Too many requests made to the API too quickly
   			throw new BadRequestAlertException("RateLimitException", ENTITY_NAME,
@@ -275,115 +362,6 @@ import io.github.jhipster.web.util.ResponseUtil;`]
   	}`]
             }, this);
 
-            jhipsterUtils.rewriteFile({
-                file: `${javaDir}web/rest/PaymentResource.java`,
-                needle: 'private final PaymentRepository paymentRepository;',
-                splicable: [`private final UserRepository userRepository;`]
-            }, this);
-
-            jhipsterUtils.rewriteFile({
-                file: `${javaDir}web/rest/PaymentResource.java`,
-                needle: 'this.paymentRepository = paymentRepository;',
-                splicable: [`this.userRepository = userRepository;`]
-            }, this);
-
-            // changing int Test for payment resource
-            var paymentRess = fs.readFileSync(`${javaTestDir}web/rest/PaymentResourceIntTest.java`);
-            var res = paymentRess.toString().replace('final PaymentResource paymentResource = new PaymentResource(paymentRepository);', 'final PaymentResource paymentResource = new PaymentResource(paymentRepository, userRepository);');
-            fs.writeFileSync(`${javaTestDir}web/rest/PaymentResourceIntTest.java`, res);
-
-            jhipsterUtils.rewriteFile({
-                file: `${javaTestDir}web/rest/PaymentResourceIntTest.java`,
-                needle: `import ${this.packageName}.repository.PaymentRepository;`,
-                splicable: [`import ${this.packageName}.repository.UserRepository;`]
-            }, this);
-
-            jhipsterUtils.rewriteFile({
-                file: `${javaTestDir}web/rest/PaymentResourceIntTest.java`,
-                needle: `@Autowired`,
-                splicable: [`@Autowired
-    private UserRepository userRepository;`]
-            }, this);
-
-            //adding payments.json file in all languages
-            if (this.jhipsterAppConfig.enableTranslation) {
-                var pathLangs = `${webappDir}i18n`;
-                var allLangs = fs.readdirSync(pathLangs);
-                for (var i = 0; i < allLangs.length; i++) {
-                    this.template('payments.json', `${webappDir}/i18n/${allLangs[i]}/payments.json`);
-                }
-            }
-            //changing pom.xml (adding stripe dependency)
-
-            // Maven + AngularX
-            if (this.buildTool === 'maven') {
-                jhipsterUtils.rewriteFile({
-                    file: 'pom.xml',
-                    needle: 'jhipster-needle-maven-add-dependency',
-                    splicable: [`<dependency>
-              <groupId>com.stripe</groupId>
-              <artifactId>stripe-java</artifactId>
-              <version>7.0.0</version>
-          </dependency>`]
-                }, this);
-
-            }
-            if (this.buildTool === 'gradle') {
-                //Add stripe dependency for stripe here
-                //compile "com.stripe:stripe-java:7.21.0"
-            }
-
-            //changing app.module.ts (adding stripe and form)
-
-            var appnamenomaj = this.baseName.toLowerCase();
-            var appname = appnamenomaj.charAt(0).toUpperCase() + appnamenomaj.substring(1);
-
-            jhipsterUtils.rewriteFile({
-                file: `${webappDir}app/app.module.ts`,
-                needle: 'jhipster-needle-angular-add-module-import',
-                splicable: [`import { NgxStripeModule } from 'ngx-stripe';
-import { ${appname}PaymentsModule } from './payments/payments.module';`]
-            }, this);
-
-            jhipsterUtils.rewriteFile({
-                file: `${webappDir}app/app.module.ts`,
-                needle: 'jhipster-needle-angular-add-module',
-                splicable: [`${appname}PaymentsModule,
-        NgxStripeModule.forRoot('${this.pubStripeKey}'),`]
-            }, this);
-
-            // changing app-routing.module.ts (import FormsModule and ReactiveFormsModule)
-            jhipsterUtils.rewriteFile({
-                file: `${webappDir}app/app-routing.module.ts`,
-                needle: './layouts',
-                splicable: [`import { FormsModule, ReactiveFormsModule } from '@angular/forms';`]
-            }, this);
-
-            jhipsterUtils.rewriteFile({
-                file: `${webappDir}app/app-routing.module.ts`,
-                needle: 'RouterModule.forRoot',
-                splicable: [`FormsModule, ReactiveFormsModule,`]
-            }, this);
-
-            // updating payments.module.ts to add project name
-            jhipsterUtils.rewriteFile({
-                file: `${webappDir}app/payments/payments.module.ts`,
-                needle: 'import { PAYMENTS_ROUTE, PaymentsComponent } from \'./\';',
-                splicable: [`import { ${appname}SharedModule } from \'app/shared\';`]
-            }, this);
-
-            jhipsterUtils.rewriteFile({
-                file: `${webappDir}app/payments/payments.module.ts`,
-                needle: 'declarations: [PaymentsComponent],',
-                splicable: [`imports: [${appname}SharedModule, RouterModule.forChild([PAYMENTS_ROUTE]), FormsModule, ReactiveFormsModule],`]
-            }, this);
-
-            jhipsterUtils.rewriteFile({
-                file: `${webappDir}app/payments/payments.module.ts`,
-                needle: '// JHipster Stripe Module will add new line here',
-                splicable: [`export class ${appname}PaymentsModule { }`]
-            }, this);
-
             // updating entities payment service (payment.service.ts)
             jhipsterUtils.rewriteFile({
                 file: `${webappDir}app/entities/payment/payment.service.ts`,
@@ -395,28 +373,12 @@ import { ${appname}PaymentsModule } from './payments/payments.module';`]
                 file: `${webappDir}app/entities/payment/payment.service.ts`,
                 needle: 'create(payment: IPayment): Observable<EntityResponseType> {',
                 splicable: [`createPaymentCurrentUser(payment: IPayment): Observable<EntityResponseType> {
-        const copy = this.convertDateFromClient(payment);
-        return this.http
-            .put<IPayment>(this.resourceUrlCreatePaymentCurrentUser, copy, { observe: 'response' })
-            .pipe(map((res: EntityResponseType) => this.convertDateFromServer(res)));
-    }`]
+const copy = this.convertDateFromClient(payment);
+return this.http
+.put<IPayment>(this.resourceUrlCreatePaymentCurrentUser, copy, { observe: 'response' })
+.pipe(map((res: EntityResponseType) => this.convertDateFromServer(res)));
+}`]
             }, this);
-
-            // Adding Payment front-end page in the navbar (html)
-
-            jhipsterUtils.rewriteFile({
-                file: `${webappDir}app/layouts/navbar/navbar.component.html`,
-                needle: '<!-- jhipster-needle-add-element-to-menu - JHipster will add new menu items here -->',
-                splicable: [`<li class="nav-item" routerLinkActive="active" [routerLinkActiveOptions]="{exact: true}">
-                <a class="nav-link" routerLink="/payments" (click)="collapseNavbar()">
-                    <span>
-                        <fa-icon icon="credit-card"></fa-icon>
-                        <span>Payment</span>
-                    </span>
-                </a>
-            </li>`]
-            }, this);
-
             // Adding Payment front-end page in the navbar (fa-icon)
             jhipsterUtils.rewriteFile({
                 file: `${webappDir}app/vendor.ts`,
@@ -429,6 +391,8 @@ import { ${appname}PaymentsModule } from './payments/payments.module';`]
                 needle: 'faTasks,',
                 splicable: [`faCreditCard,`]
             }, this);
+
+
 
         } else {
             this.warning(`\n Your JHipster configuration is not supported yet ! :( Please use Maven and AngularX...`);

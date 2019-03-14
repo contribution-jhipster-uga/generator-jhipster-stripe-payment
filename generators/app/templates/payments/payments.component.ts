@@ -140,7 +140,15 @@ export class PaymentsComponent implements OnInit {
                     this.payment.currency = this.currency;
                     this.payment.token = result.token.id;
                     this.payment.date = moment();
-                    this.subscribeToSaveResponse(this.paymentService.createPaymentCurrentUser(this.payment));
+                    this.accountService.fetch()
+                      .toPromise()
+                      .then(response => {
+                        const account = response.body;
+                        if (account) {
+                          this.payment.user = account;
+                        }
+                        this.subscribeToSaveResponse(this.paymentService.createPaymentCurrentUser(this.payment));
+                      });
                 } else if (result.error) {
                     // Error creating the token
                     console.log('Error creating the token!');
