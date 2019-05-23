@@ -1,6 +1,6 @@
 # generator-jhipster-stripe-payment
 [![NPM version][npm-image]][npm-url] [![Build Status][travis-image]][travis-url] [![Dependency Status][daviddm-image]][daviddm-url]
-> JHipster module, this module integrate the payment plateform STRIPE to a Jhipster project.(It includes a web payment page and a JHipster payment entity)
+> JHipster module, this module integrate the payment platform STRIPE to a Jhipster project.(It includes a web payment page and a JHipster payment entity)
 
 # Introduction
 
